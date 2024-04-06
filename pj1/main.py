@@ -6,13 +6,15 @@ import pandas as pd
 from sklearn.preprocessing import label_binarize
 from sklearn.svm import SVC
 from fea import feature_extraction
+from sklearn.linear_model import LogisticRegression
+from sklearn.svm import LinearSVC
 
 from Bio.PDB import PDBParser
 
 class SVMModel:
     def __init__(self, kernel='rbf', C=1.0):
         self.model = SVC(kernel=kernel, C=C, probability=True)
-
+#  max_iter=20000
     def train(self, train_data, train_targets):
         self.model.fit(train_data, train_targets)
 
@@ -20,6 +22,14 @@ class SVMModel:
         return self.model.score(data, targets)
 
 class LRModel:
+    def __init__(self, C=1.0):
+        self.model = LogisticRegression(C=C)
+
+    def train(self, train_data, train_targets):
+        self.model.fit(train_data, train_targets)
+
+    def evaluate(self, data, targets):
+        return self.model.score(data, targets)
     # todo: 
     """
         Initialize Logistic Regression (from sklearn) model.
@@ -48,6 +58,12 @@ class LRModel:
     """
 
 class LinearSVMModel:
+    def __init__(self, C=1.0):
+        self.model = LinearSVC(C=C)
+    def train(self, train_data, train_targets):
+        self.model.fit(train_data, train_targets)
+    def evaluate(self, data, targets):
+        return self.model.score(data, targets)
     # todo
     """
         Initialize Linear SVM (from sklearn) model.
@@ -75,9 +91,42 @@ def data_preprocess(args):
         task_col = cast.iloc[:, task]
       
         ## todo: Try to load data/target
-        
+        train_data = []
+        train_targets = []
+        test_data = []
+        test_targets = []
+        # "1"= +train;	 "2"= -train; 
+        # “3”= +test;   	 "4"= -test
+
+        for i in range(len(task_col)):
+            if task_col[i] == 1:
+                train_data.append(diagrams[i])
+                train_targets.append(1)
+            elif task_col[i] == 2:
+                train_data.append(diagrams[i])
+                train_targets.append(0)
+            elif task_col[i] == 3:
+                test_data.append(diagrams[i])
+                test_targets.append(1)
+            elif task_col[i] == 4:
+                test_data.append(diagrams[i])
+                test_targets.append(0)
+            else:
+                print(f"Task {task} - Unsupported task label: {task_col[i]}")
+                raise ValueError("Unsupported task label")
+
+        train_data = np.array(train_data)
+        train_targets = np.array(train_targets)
+        test_data = np.array(test_data)
+        test_targets = np.array(test_targets)
+
         data_list.append((train_data, test_data))
         target_list.append((train_targets, test_targets))
+    #     print(len(train_data), len(test_data))
+    #     print(train_data.shape, test_data.shape)
+    # print(len(data_list), len(target_list))
+    # raise NotImplementedError("Please implement the data preprocessing function")
+    
     
     return data_list, target_list
 
