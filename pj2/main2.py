@@ -12,7 +12,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from torchvision import datasets
 from torchvision import transforms
-# from torchvision.models import resnext50_32x4d
+from torchvision.models import resnext50_32x4d
 import os
 from tqdm import tqdm
 
@@ -86,13 +86,8 @@ class ResNet(nn.Module):
         out = out.view(out.size(0), -1)
         out = self.linear(out)
         return F.log_softmax(out, dim=-1)
+    
 
-
-def design_model():
-    return ResNet(BasicBlock, [2, 2, 2, 2])
-
-
-# DenseNet
 class DenseBlock(nn.Module):
     def __init__(self, in_channels, growth_rate):
         super(DenseBlock, self).__init__()
@@ -179,11 +174,13 @@ class DenseNet(nn.Module):
         out = self.fc(out)
         return F.log_softmax(out, dim=-1)
 
+def design_model():
+    return ResNet(BasicBlock, [2, 2, 2, 2])
+
 def design_model2():
     # return DenseNet()
     return DenseNet(growth_rate=32, block_config=(2,2,2,2), num_classes=10)
 
-# ResNeXt
 class CardinalityBlock(nn.Module):
     expansion = 1
 
@@ -195,11 +192,11 @@ class CardinalityBlock(nn.Module):
         self.stride = stride
         self.split_channels = out_channels // cardinality
 
-        self.conv1x1 = nn.Conv2d(in_channels, out_channels, kernel_size=1, bias=False)
+        self.conv1 = nn.Conv2d(in_channels, out_channels, kernel_size=1, bias=False)
         self.bn1 = nn.BatchNorm2d(out_channels)
         self.conv3x3 = nn.Conv2d(out_channels, out_channels, kernel_size=3, stride=stride, padding=1, groups=cardinality, bias=False)
         self.bn2 = nn.BatchNorm2d(out_channels)
-        self.conv1x1_expand = nn.Conv2d(out_channels, out_channels * self.expansion, kernel_size=1, bias=False)
+        self.conv1_expand = nn.Conv2d(out_channels, out_channels * self.expansion, kernel_size=1, bias=False)
         self.bn3 = nn.BatchNorm2d(out_channels * self.expansion)
 
         if stride != 1 or in_channels != out_channels * self.expansion:
@@ -257,7 +254,7 @@ def design_model3():
     return ResNeXt(block=CardinalityBlock, num_blocks=[2, 2, 2, 2], cardinality=32, num_classes=10)
 
 
-# ResNet-50
+# 定义 ResNet-50
 class ResNet50(nn.Module):
     def __init__(self, block, num_blocks, num_classes=10):
         super(ResNet50, self).__init__()
@@ -290,6 +287,7 @@ class ResNet50(nn.Module):
         out = self.linear(out)
         return F.log_softmax(out, dim=-1)
 
+# 创建 ResNet-50 模型
 def resnet50(num_classes=10):
     return ResNet50(BasicBlock, [3, 4, 6, 3], num_classes)
 
@@ -312,9 +310,12 @@ def model_training(model, device, train_dataloader, optimizer, train_acc, train_
         output = model(data)
         loss = torch.nn.CrossEntropyLoss()(output, target)
         # loss = F.nll_loss(output, target)
+        # loss = criterion(outputs, labels)  
         loss.backward()
         optimizer.step()
+        # y_pred = output.argmax(dim=1, keepdim=True)
         y_pred = output
+        # _, y_pred = torch.max(output, 1)
         #TODO,补全代码,填在上方
 
         train_losses.append(loss.item())
@@ -325,6 +326,7 @@ def model_training(model, device, train_dataloader, optimizer, train_acc, train_
         running_loss += loss.item()
         pbar.set_description(desc=f'Loss={loss.item()} Batch_id={batch_idx} Accuracy={100*correct/processed:0.2f}')
         train_acc.append(100*correct/processed)
+        # break
 
 
 #验证代码
@@ -347,6 +349,9 @@ def model_testing(model, device, test_dataloader, test_acc, test_losses, misclas
             output = model(data)
             # test_loss += F.nll_loss(output, target, reduction='sum').item()
             test_loss += torch.nn.CrossEntropyLoss()(output, target).item()*data.size(0)
+            # print( test_loss )
+            # print(data.size(0))
+            # loss = criterion(outputs, labels)
 
             #TODO,补全代码,填在上方
 
@@ -397,17 +402,16 @@ def main():
 
     # Importing Model and printing Summary,默认是ResNet-18
     #TODO,分析讨论其他的CNN网络设计
-    # model = resnet50().to(device)
-    # model = design_model2().to(device)
-    model = design_model().to(device)
+
+    model = design_model3().to(device)
     summary(model, input_size=(3,32,32))
 
     # Training the model
 
-    optimizer = optim.SGD(model.parameters(), lr=0.01, momentum=0.9)
-    scheduler = ReduceLROnPlateau(optimizer, mode='min', factor=0.05, patience=2, threshold=0.0001, threshold_mode='rel', cooldown=0, min_lr=0, eps=1e-08, verbose=True)
-    # optimizer = optim.RMSprop(model.parameters(), lr=0.001, momentum=0.9)
+    # optimizer = optim.SGD(model.parameters(), lr=0.01, momentum=0.9)
     # scheduler = ReduceLROnPlateau(optimizer, mode='min', factor=0.05, patience=2, threshold=0.0001, threshold_mode='rel', cooldown=0, min_lr=0, eps=1e-08, verbose=True)
+    optimizer = optim.RMSprop(model.parameters(), lr=0.001, momentum=0.9)
+    scheduler = ReduceLROnPlateau(optimizer, mode='min', factor=0.05, patience=2, threshold=0.0001, threshold_mode='rel', cooldown=0, min_lr=0, eps=1e-08, verbose=True)
     # optimizer = optim.Adam(model.parameters(), lr=0.01, weight_decay=0.0005)
     # scheduler = StepLR(optimizer, step_size=10, gamma=0.5)
 
