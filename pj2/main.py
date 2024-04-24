@@ -101,15 +101,19 @@ def design_model():
 
 # DenseNet
 class DenseBlock(nn.Module):
+    expansion = 1
+
     def __init__(self, in_channels, growth_rate):
         super(DenseBlock, self).__init__()
+        DROPOUT = 0.1
         self.conv1 = nn.Conv2d(in_channels, growth_rate, kernel_size=3, padding=1)
-        self.conv2 = nn.Conv2d(growth_rate, growth_rate, kernel_size=3, padding=1)
+        self.conv2 = nn.Conv2d(in_channels, growth_rate, kernel_size=3, padding=1)
         self.bn = nn.BatchNorm2d(growth_rate)
+        self.dropout = nn.Dropout(DROPOUT)
 
     def forward(self, x):
-        out = F.relu(self.bn(self.conv1(x)))
-        out = F.relu(self.bn(self.conv2(out)))
+        out = F.relu(self.dropout(self.bn(self.conv1(x))))
+        out = F.relu(self.dropout(self.bn(self.conv2(out))))
         out = torch.cat([x, out], 1)
         return out
 
@@ -159,7 +163,7 @@ class DenseNet(nn.Module):
 
         self.bn = nn.BatchNorm2d(in_channels)
         self.avg_pool = nn.AdaptiveAvgPool2d((1, 1))
-        self.fc = nn.Linear(in_channels, num_classes)
+        self.fc = nn.Linear(512, num_classes)
 
     def _make_dense_block(self, block, in_channels, num_layers):
         layers = []
