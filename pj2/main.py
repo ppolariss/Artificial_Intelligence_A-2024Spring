@@ -107,13 +107,13 @@ class DenseBlock(nn.Module):
         super(DenseBlock, self).__init__()
         DROPOUT = 0.1
         self.conv1 = nn.Conv2d(in_channels, growth_rate, kernel_size=3, padding=1)
-        self.conv2 = nn.Conv2d(in_channels, growth_rate, kernel_size=3, padding=1)
+        self.conv2 = nn.Conv2d(growth_rate, growth_rate, kernel_size=3, padding=1)
         self.bn = nn.BatchNorm2d(growth_rate)
         self.dropout = nn.Dropout(DROPOUT)
 
     def forward(self, x):
         out = F.relu(self.dropout(self.bn(self.conv1(x))))
-        out = F.relu(self.dropout(self.bn(self.conv2(out))))
+        # out = F.relu(self.dropout(self.bn(self.conv2(out))))
         out = torch.cat([x, out], 1)
         return out
 
@@ -135,7 +135,7 @@ class DenseNet(nn.Module):
         super(DenseNet, self).__init__()
         self.growth_rate = growth_rate
 
-        in_channels = 2 * growth_rate  # Initial channels before first dense block
+        in_channels =  growth_rate  # Initial channels before first dense block
 
         self.conv1 = nn.Conv2d(3, in_channels, kernel_size=3, padding=1)
         self.bn1 = nn.BatchNorm2d(in_channels)
@@ -163,7 +163,7 @@ class DenseNet(nn.Module):
 
         self.bn = nn.BatchNorm2d(in_channels)
         self.avg_pool = nn.AdaptiveAvgPool2d((1, 1))
-        self.fc = nn.Linear(512, num_classes)
+        self.fc = nn.Linear(124, num_classes)
 
     def _make_dense_block(self, block, in_channels, num_layers):
         layers = []
@@ -406,8 +406,8 @@ def main():
     # Importing Model and printing Summary,默认是ResNet-18
     # TODO,分析讨论其他的CNN网络设计
     # model = resnet50().to(device)
-    # model = design_model2().to(device)
-    model = design_model().to(device)
+    model = design_model2().to(device)
+    # model = design_model().to(device)
     summary(model, input_size=(3, 32, 32))
 
     # Training the model

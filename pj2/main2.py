@@ -103,12 +103,12 @@ def design_model():
 class DenseBlock(nn.Module):
     expansion = 1
 
-    def __init__(self, in_channels, growth_rate):
+    def __init__(self, in_channels, planes):
         super(DenseBlock, self).__init__()
         DROPOUT = 0.1
-        self.conv1 = nn.Conv2d(in_channels, growth_rate, kernel_size=3, padding=1)
-        self.conv2 = nn.Conv2d(in_channels, growth_rate, kernel_size=3, padding=1)
-        self.bn = nn.BatchNorm2d(growth_rate)
+        self.conv1 = nn.Conv2d(in_channels, planes, kernel_size=3, padding=1)
+        self.conv2 = nn.Conv2d(in_channels, planes, kernel_size=3, padding=1)
+        self.bn = nn.BatchNorm2d(planes)
         self.dropout = nn.Dropout(DROPOUT)
 
     def forward(self, x):
@@ -135,7 +135,7 @@ class DenseNet(nn.Module):
         super(DenseNet, self).__init__()
         self.growth_rate = growth_rate
 
-        in_channels = 2 * growth_rate  # Initial channels before first dense block
+        in_channels = 64 # Initial channels before first dense block
 
         self.conv1 = nn.Conv2d(3, in_channels, kernel_size=3, padding=1)
         self.bn1 = nn.BatchNorm2d(in_channels)
@@ -163,7 +163,7 @@ class DenseNet(nn.Module):
 
         self.bn = nn.BatchNorm2d(in_channels)
         self.avg_pool = nn.AdaptiveAvgPool2d((1, 1))
-        self.fc = nn.Linear(512, num_classes)
+        self.fc = nn.Linear(64, num_classes)
 
     def _make_dense_block(self, block, in_channels, num_layers):
         layers = []
@@ -322,14 +322,16 @@ class ResNeXt(nn.Module):
         self.layer4 = self._make_layer(num_blocks[3], 512, stride=2)
 
         self.avgpool = nn.AdaptiveAvgPool2d((1, 1))
-        self.fc = nn.Linear(512 * cardinality * bottleneck_width, num_classes)
+        self.fc = nn.Linear(128, num_classes)
+        # 512 * cardinality * bottleneck_width
 
     def _make_layer(self, num_blocks, planes, stride=1):
         strides = [stride] + [1] * (num_blocks - 1)
         layers = []
         for stride in strides:
             layers.append(Block(self.in_channels, self.cardinality, self.bottleneck_width))
-            self.in_channels = planes * self.cardinality * self.bottleneck_width
+            self.in_channels = 128
+            # planes * self.cardinality * self.bottleneck_width
         return nn.Sequential(*layers)
 
     def forward(self, x):
@@ -487,7 +489,8 @@ def main():
 
     # Importing Model and printing Summary,默认是ResNet-18
     # TODO,分析讨论其他的CNN网络设计
-    model = resnet50().to(device)
+    # model = resnet50().to(device)
+    model = resnext50_32x4d().to(device)
     # model = design_model2().to(device)
     # model = design_model2().to(device)
     summary(model, input_size=(3, 32, 32))
